@@ -70,4 +70,20 @@ ORDER BY avg_strikeout DESC
 
 -- Answer: The number of homeruns and strikeouts generally tends to increase each decade since 1920. This can be due to many factors such as natural progression, intergration, steriods, and league expansion (adding more teams). */
 =====================================================================================================================================================================================================================================
+--sb= stolen base
+--cs= caught stealing
+
+
+SELECT p.namefirst, 
+p.namelast,
+p.namegiven, 
+SUM(b.sb) AS succesful_sb, 
+SUM(b.sb + b.cs) AS total_attempts
+SUM(succesful_sb) * 100.0 / NULLIF(SUM(total_attempts), 0) AS percent_successful
+FROM people AS p
+INNER JOIN batting AS b
+ON p.playerid = b.playerid
+WHERE yearid = 2016
+AND total_attempts > 20
+ORDER BY percent_successful DESC
 
