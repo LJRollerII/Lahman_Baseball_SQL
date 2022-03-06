@@ -95,4 +95,22 @@ ORDER BY percent_success DESC;
 
 --Answer:Chris Ownings */
 ========================================================================================================================================================================================================================================
- 
+SELECT *
+FROM teams
+
+SELECT teamid, name, yearid, MAX(w) 
+FROM teams
+WHERE wswin = 'N'
+GROUP BY teamid, name, yearid
+ORDER BY MAX(w) DESC
+
+SELECT teamid, name, yearid, MIN(w) 
+FROM teams
+WHERE wswin = 'N'
+GROUP BY teamid, name, yearid
+ORDER BY MIN(w) 
+
+--Answer: Pt.1: 116 largest number of wins for a team that did not win the world series. 
+-- Pt.2: 12 is the smallest number of wins for a team that did win the world series. The low number of wins was probably due the Washingtion Nationals (known as Statesmen) dropping out and not finishing the season and the Richmond Virginians replacing them and competing for only part of the season.
+	   
+	   
