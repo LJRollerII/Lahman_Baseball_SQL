@@ -34,8 +34,7 @@ ORDER BY s.salary DESC
 
 -- Answer: David Price earned the most money in the majors */
 ========================================================================================================================================================================================================================================
-/*4. SELECT *
-FROM fielding
+/*4.
 
 SELECT SUM(po),
      CASE WHEN pos = 'OF' THEN 'Outfield'
@@ -48,11 +47,10 @@ ORDER BY SUM(po) DESC
 
 --Answer: Infield: 58934, Battery: 41424, Outfield: 29560 */
 =====================================================================================================================================================================================================================================
-/* 5.SELECT *
-FROM batting
+/* 5.
 
-SELECT ROUND(AVG(so),2) AS avg_strikeout, 
-ROUND(AVG(hr),2) AS avg_homerun,
+SELECT ROUND(AVG(so / g),2) AS avg_strikeout_game, 
+ROUND(AVG(hr / g),2) AS avg_homerun_game,
       CASE WHEN yearid BETWEEN 1920 AND 1929 THEN '1920s'
       WHEN yearid BETWEEN 1930 AND 1939 THEN '1930s'
       WHEN yearid BETWEEN 1940 AND 1949 THEN '1940s'
@@ -63,27 +61,38 @@ ROUND(AVG(hr),2) AS avg_homerun,
       WHEN yearid BETWEEN 1990 AND 1999 THEN '1990s'
       WHEN yearid BETWEEN 2000 AND 2009 THEN '2000s'
       WHEN yearid BETWEEN 2010 AND 2016 THEN '2010s' END AS decade
-FROM batting
+FROM teams
 WHERE yearid >= 1920
 GROUP BY decade
-ORDER BY avg_strikeout DESC
+ORDER BY avg_strikeout_game DESC
 
 -- Answer: The number of homeruns and strikeouts generally tends to increase each decade since 1920. This can be due to many factors such as natural progression, intergration, steriods, and league expansion (adding more teams). */
 =====================================================================================================================================================================================================================================
 --sb= stolen base
 --cs= caught stealing
 
-
-SELECT p.namefirst, 
-p.namelast,
-p.namegiven, 
-SUM(b.sb) AS succesful_sb, 
-SUM(b.sb + b.cs) AS total_attempts
-SUM(succesful_sb) * 100.0 / NULLIF(SUM(total_attempts), 0) AS percent_successful
+/*6.SELECT
+	p.namefirst,
+	p.namelast,
+	p.playerid,
+	b.yearid,
+	SUM(b.sb) AS total_stolen,
+	SUM(b.sb + b.cs) AS total_attempts,
+	SUM(b.sb) * 100.0 / NULLIF(SUM(b.sb + b.cs),0) AS percent_success
 FROM people AS p
-INNER JOIN batting AS b
+LEFT JOIN batting AS b
 ON p.playerid = b.playerid
-WHERE yearid = 2016
-AND total_attempts > 20
-ORDER BY percent_successful DESC
+GROUP BY
+	p.namefirst,
+	p.namelast,
+	p.playerid,
+	b.yearid,
+	b.sb,
+	b.cs
+HAVING SUM(b.sb + b.cs) > 20
+AND yearid = 2016
+ORDER BY percent_success DESC;
 
+--Answer:Chris Ownings */
+========================================================================================================================================================================================================================================
+ 
