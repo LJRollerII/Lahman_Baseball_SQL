@@ -101,16 +101,190 @@ FROM teams
 SELECT teamid, name, yearid, MAX(w) 
 FROM teams
 WHERE wswin = 'N'
+AND yearid BETWEEN 1970 AND 2016
 GROUP BY teamid, name, yearid
 ORDER BY MAX(w) DESC
 
 SELECT teamid, name, yearid, MIN(w) 
 FROM teams
-WHERE wswin = 'N'
+WHERE wswin = 'Y'
+AND yearid BETWEEN 1970 AND 2016
 GROUP BY teamid, name, yearid
-ORDER BY MIN(w) 
+ORDER BY MIN(w)
+
+SELECT teamid, name, yearid, MIN(w) 
+FROM teams
+WHERE wswin = 'Y'
+AND yearid BETWEEN 1970 AND 2016
+AND yearid <> 1981
+GROUP BY teamid, name, yearid
+ORDER BY MIN(w)
+
+SELECT teamid, name, wswin, yearid, MAX(w) 
+FROM teams
+WHERE wswin = 'Y'
+AND yearid BETWEEN 1970 AND 2016
+GROUP BY teamid, name, yearid, wswin
+ORDER BY MAX(w) DESC
+
+/*(SELECT teamid, name, yearid, MAX(w) 
+FROM teams
+WHERE wswin = 'N'
+AND yearid BETWEEN 1970 AND 2016
+GROUP BY teamid, name, yearid
+ORDER BY MAX(w) DESC) AS subquery*/
 
 --Answer: Pt.1: 116 largest number of wins for a team that did not win the world series. 
--- Pt.2: 12 is the smallest number of wins for a team that did win the world series. The low number of wins was probably due the Washingtion Nationals (known as Statesmen) dropping out and not finishing the season and the Richmond Virginians replacing them and competing for only part of the season.
-	   
+-- Pt.2: 63 is the smallest number of wins for a team that did win the world series. The low number of wins was due to the MLB strike of 1981.
+-- Pt.3: When redoing the query 83 is the smallest number of wins for a team that did win the world series.	   
+================================================================================================================================================================================================================================================================================================================================	   
+/*8. SELECT *
+FROM homegames
+
+SELECT attendance,
+			team,
+			park,
+		    games,
+			attendance / games AS avg_attendance
+FROM homegames
+WHERE year=2016
+AND games >= 10
+ORDER BY avg_attendance DESC
+LIMIT 5
+
+SELECT attendance,
+			team,
+			park,
+		    games,
+			attendance / games AS avg_attendance
+FROM homegames
+WHERE year=2016
+AND games >= 10
+ORDER BY avg_attendance
+LIMIT 5
+
+
+
+--Answer:Pt 1: LAN (Los Angeles Dodgers), LOS03 (Dodger Stadium), 45719 (average attendance)
+-- Pt 2: TBA (Tampa Bay Rays), STP01 (Tropicana Field), 15878 (average attendance) */
+========================================================================================================================================================================================================================================================================================================================================
+
+9.
+
+SELECT playerid, awardid, yearid, lgid
+FROM awardsmanagers
+WHERE awardid = 'TSN Manager of the Year'
+
+
+SELECT playerid, awardid, yearid, lgid
+FROM awardsmanagers
+WHERE awardid = 'TSN Manager of the Year'
+AND lgid ='AL'
+
+SELECT playerid, awardid, yearid, lgid
+FROM awardsmanagers
+WHERE awardid = 'TSN Manager of the Year'
+AND lgid ='NL'
+
+SELECT playerid, awardid, yearid, lgid, COUNT(awardid) AS num_awards
+FROM awardsmanagers
+WHERE awardid = 'TSN Manager of the Year'
+AND lgid ='AL'
+OR lgid = 'NL'
+GROUP BY playerid, awardid, yearid,  lgid
+ORDER BY playerid
+
+
+WITH NL AS (
+SELECT *
+FROM awardsmanagers
+where lgid = 'NL'),
+AL AS (
+SELECT *
+FROM awardsmanagers
+WHERE lgid = 'AL')
+SELECT DISTINCT NL.playerid,
+p.namefirst,
+p.namelast,
+m.teamid,
+m.yearid,
+NL.awardid,
+AL.awardid,
+NL.lgid,
+AL.lgid
+FROM NL
+INNER JOIN AL
+ON NL.playerid = AL.playerid
+LEFT JOIN people AS p
+ON NL.playerid = p.playerid
+LEFT JOIN managers AS m
+ON p.playerid = m.playerid
+WHERE NL.awardid ILIKE '%TSN Manager%'
+AND AL.awardid ILIKE '%TSN Manager%'
+
+
+--CTE Chapter 3 of Immeidate SQL in datacamp for reference.
+
+--Ansewer: Davie Johnson with the Baltimore Orioles (AL) in 1997 and Washington Nationals (NL) in 2012
+-- Jim Leyland with the Detriot Tigers (AL) in 2006 and Pittsburgh Pirates Nationals (NL) in 1990.
+========================================================================================================================================================================================================================================================================================================================================
+
+
+SELECT t.teamid, t.name, t.wswin, t.yearid, MAX(t.w) 
+FROM teams AS t
+WHERE t.wswin = 'Y'
+AND yearid BETWEEN 1970 AND 2016
+--GROUP BY t.teamid, t.name, t.yearid, t.wswin
+--ORDER BY MAX(w) DESC
+JOIN
+(SELECT teamid, name, yearid, MAX(w) 
+FROM teams
+WHERE wswin = 'N'
+AND yearid BETWEEN 1970 AND 2016
+GROUP BY teamid, name, yearid
+ORDER BY MAX(w) DESC) AS subquery
+ON t.w = subquery.w
+
+SELECT teamid, name, wswin, yearid, MAX(w) 
+FROM teams
+WHERE wswin = 'Y'
+AND yearid BETWEEN 1970 AND 2016
+GROUP BY teamid, name, yearid, wswin
+ORDER BY yearid 
+
+SELECT teamid, name, wswin, yearid, MAX(w) 
+FROM teams
+WHERE wswin = 'N'
+AND yearid BETWEEN 1970 AND 2016
+GROUP BY teamid, name, yearid, wswin
+ORDER BY yearid 
+
+
+--USE CTE for reference
+WITH home AS (
+  SELECT m.id, m.date, 
+       t.team_long_name AS hometeam, m.home_goal
+  FROM match AS m
+  LEFT JOIN team AS t 
+  ON m.hometeam_id = t.team_api_id),
+-- Declare and set up the away CTE
+away as (
+  SELECT m.id, m.date, 
+       t.team_long_name AS awayteam, m.away_goal
+  FROM match AS m
+  LEFT JOIN team AS t 
+  ON m.awayteam_id = t.team_api_id)
+-- Select date, home_goal, and away_goal
+SELECT 
+  home.date,
+    home.hometeam,
+    away.awayteam,
+    home.home_goal,
+    away.away_goal
+-- Join away and home on the id column
+FROM home
+INNER JOIN away
+ON home.id = away.id;
+
+
 	   
