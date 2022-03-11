@@ -242,21 +242,10 @@ AND AL.awardid ILIKE '%TSN Manager%'
 10.
 
 WITH NOT2016 AS (
-SELECT MAX(hr)
+SELECT MAX(hr), playerid
 FROM batting
-WHERE yearid <> 2016),
-AL AS (
-SELECT *
-FROM awardsmanagers
-WHERE lgid = 'AL')
-
-
-
-
-
-
-
-
+WHERE yearid <> 2016
+GROUP BY batting.playerid)
 SELECT p.namefirst,
 		p.namelast,
 		p.playerid,
@@ -264,6 +253,7 @@ SELECT p.namefirst,
 		b.hr,
 		b.g, 
 		b.stint,
+		(CAST(p.finalgame AS date) - CAST(p.debut AS date)) / 365 AS years_played,
 		g_all
 FROM people AS p
 JOIN batting AS b
@@ -272,6 +262,7 @@ LEFT JOIN appearances AS a
 ON b.playerid = a.playerid
 WHERE b.yearid = 2016
 AND hr >= 1
+AND (CAST(p.finalgame AS date) - CAST(p.debut AS date)) / 365 >= 10
 ORDER BY hr DESC
 
 
@@ -287,7 +278,8 @@ GROUP BY p.namelast, p.namefirst
 ORDER BY p.namelast, p.namefirst;
 
 
-
+SELECT *
+FROM people
 
 ================================================================================================================
 11.
