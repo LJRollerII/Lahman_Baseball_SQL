@@ -251,6 +251,7 @@ SELECT p.namefirst,
 		p.playerid,
 		b.yearid,
 		b.hr,
+		MAX(b.hr),
 		b.g, 
 		b.stint,
 		(CAST(p.finalgame AS date) - CAST(p.debut AS date)) / 365 AS years_played,
@@ -263,6 +264,15 @@ ON b.playerid = a.playerid
 WHERE b.yearid = 2016
 AND hr >= 1
 AND (CAST(p.finalgame AS date) - CAST(p.debut AS date)) / 365 >= 10
+GROUP BY p.namefirst,
+		p.namelast,
+		p.playerid,
+		b.yearid,
+		b.hr,
+		b.hr,
+		b.g, 
+		b.stint,
+		g_all
 ORDER BY hr DESC
 
 
