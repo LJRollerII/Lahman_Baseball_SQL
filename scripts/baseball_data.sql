@@ -15,7 +15,15 @@ ON p.playerid = a.playerid
 GROUP BY p.playerid, a.teamid
 ORDER BY MIN(p.height)
 
--- Answer: Eddie Gaedel aka Edward Carl. Height is 43 inches, played for SLA, and only played one game on 8/19/1951 */
+--Alternate with a subq in the WHERE
+SELECT namefirst, namelast, height, weight, g_all, teamID
+FROM people
+LEFT JOIN appearances
+USING(playerid)
+WHERE height = (SELECT MIN(height)
+			   	FROM people)
+
+-- Answer: Eddie Gaedel aka Edward Carl. Height is 43 inches, played for SLA (St. Louis Browns), and only played one game on 8/19/1951 */
 ========================================================================================================================================================================================================================================
 /* 3.SELECT *
 FROM collegeplaying
@@ -32,7 +40,56 @@ WHERE c.schoolid = 'vandy'
 AND s.salary IS NOT NULL 
 ORDER BY s.salary DESC
 
--- Answer: David Price earned the most money in the majors ($245,553,888) */
+--Alternate with subq in the WHERE instead of JOIN
+SELECT playerid,
+		namefirst,
+		namelast,
+		SUM(salary)
+FROM people
+LEFT JOIN salaries
+USING(playerid)
+WHERE playerid IN (SELECT playerid
+					FROM collegeplaying
+					WHERE schoolid = 'vandy')
+AND salary IS NOT NULL
+GROUP BY playerid, namefirst, namelast
+ORDER BY SUM(salary) DESC;
+
+--Checking for duplication to make sure my salaries are right (they were not)
+-- SELECT namefirst, namelast, salary, playerid
+-- FROM people
+-- LEFT JOIN salaries
+-- USING(playerid)
+-- LEFT JOIN collegeplaying
+-- USING(playerid)
+-- WHERE schoolid = 'vandy' AND playerid = 'sandesc01'
+
+-- SELECT *
+-- FROM collegeplaying
+-- WHERE playerid = 'sandesc01'
+
+-- SELECT *
+-- FROM salaries
+-- WHERE playerid = 'sandesc01'
+
+-- SELECT schoolid, MAX(yearid), playerid
+-- 		   FROM collegeplaying
+-- 		   WHERE playerid = 'sandesc01'
+-- 		   GROUP BY schoolid, playerid
+
+--Checking to see if adding DISTINCT to the salary sum would affect the result (it does)
+-- SELECT playerid, salary
+-- FROM salaries
+-- WHERE playerid = 'priceda01'
+-- ORDER BY salary
+
+-- SELECT playerid, salary
+-- FROM salaries
+-- WHERE playerid = 'sandesc01'
+-- ORDER BY salary
+
+
+-- Answer: David Price earned the most money in the majors ($81,851,296)*/
 ========================================================================================================================================================================================================================================
 /*4.
 
@@ -66,6 +123,17 @@ WHERE yearid >= 1920
 GROUP BY decade
 ORDER BY avg_strikeout_game DESC
 
+--With a formula instead of a GROUP BY
+SELECT (yearid)/10*10 AS decade, 
+		SUM(so) as so_batter, SUM(soa) as so_pitcher, 
+		ROUND(CAST(SUM(so) as dec) / CAST(SUM(g/2) as dec), 2) as so_per_game,
+		ROUND(CAST(SUM(hr) as dec) / CAST(SUM(g/2) as dec), 2) as hr_per_game
+FROM teams
+WHERE (yearid)/10*10 > 1910
+GROUP BY decade
+ORDER BY decade;
+
+
 -- Answer: The number of homeruns and strikeouts generally tends to increase each decade since 1920. This can be due to many factors such as natural progression, intergration, steriods, and league expansion (adding more teams). */
 =====================================================================================================================================================================================================================================
 --sb= stolen base
@@ -95,7 +163,7 @@ ORDER BY percent_success DESC;
 
 --Answer:Chris Ownings */
 ========================================================================================================================================================================================================================================
-7.
+/*7.
 
 SELECT *
 FROM teams
@@ -136,10 +204,25 @@ AND yearid BETWEEN 1970 AND 2016
 GROUP BY teamid, name, yearid
 ORDER BY MAX(w) DESC) AS subquery*/
 
+
+WITH winnies AS (
+	SELECT yearid, teamid, w, wswin,
+	MAX(w) OVER(PARTITION BY yearid) AS most_wins,
+	CASE WHEN wswin = 'Y' THEN CAST(1 AS numeric)
+		ELSE CAST(0 AS numeric) END AS ynbin
+	FROM teams
+	WHERE yearid BETWEEN 1970 AND 2016
+		AND yearid != 1981
+		AND wswin IS NOT NULL)
+
+SELECT SUM(ynbin) AS most_wins_wswin, COUNT(DISTINCT yearid) AS all_years, ROUND(SUM(ynbin)/COUNT(DISTINCT yearid), 3) AS perc_most_wins_wswin
+FROM winnies
+WHERE w = most_wins;
+
 --Answer: Pt.1: 116 largest number of wins for a team that did not win the world series. 
 -- Pt.2: 63 is the smallest number of wins for a team that did win the world series. The low number of wins was due to the MLB strike of 1981.
 -- Pt.3: When redoing the query 83 is the smallest number of wins for a team that did win the world series.	
--- Pt.4: 
+-- Pt.4: 12 times was the case that a team with the most wins also won the world series. This happened 26.7% of the time.
 ================================================================================================================================================================================================================================================================================================================================	   
 /*8. SELECT *
 FROM homegames
@@ -236,7 +319,69 @@ AND AL.awardid ILIKE '%TSN Manager%'
 
 --CTE Chapter 3 of Immeidate SQL in datacamp for reference.
 
---Ansewer: Davie Johnson with the Baltimore Orioles (AL) in 1997 and Washington Nationals (NL) in 2012
+--Alternative/Better way to find answer
+
+WITH tsn_nl AS
+(SELECT playerid, awardid, yearid, lgid
+FROM awardsmanagers
+WHERE awardid = 'TSN Manager of the Year'
+	AND lgid = 'NL'),
+
+tsn_al AS
+(SELECT playerid, awardid, yearid, lgid
+FROM awardsmanagers
+WHERE awardid = 'TSN Manager of the Year'
+	AND lgid = 'AL'),
+	
+winners_only AS
+(SELECT tsn_nl.playerid, namefirst, namelast,
+	tsn_nl.awardid, 
+	tsn_nl.yearid AS nl_year, 
+	tsn_al.yearid AS al_year
+FROM tsn_nl
+INNER JOIN tsn_al
+USING(playerid)
+LEFT JOIN people
+USING(playerid))
+
+SELECT subq.playerid, namefirst, namelast, team, awardid, year, league
+FROM(SELECT nl_year AS year, playerid, namefirst, namelast, awardid
+	 FROM winners_only
+	 UNION
+	 SELECT al_year, playerid, namefirst, namelast, awardid
+	 FROM winners_only) AS subq
+LEFT JOIN
+(SELECT nl_year AS year, 'nl' AS league
+	 FROM winners_only
+	 UNION
+	 SELECT al_year AS year, 'al'
+	 FROM winners_only) AS subq2
+USING(year)
+LEFT JOIN 
+(SELECT playerid, yearid, teamid, name AS team
+FROM managers
+LEFT JOIN teams
+USING(teamid, yearid)) AS subq3
+ON subq.playerid = subq3.playerid AND subq.year = subq3.yearid
+ORDER BY year;
+
+--Checking Jim and Davey's teams in their TSN award years
+-- SELECT teamid, yearid, playerid
+-- FROM managers
+-- WHERE yearid IN (1988, 1990, 1992, 1997, 2006, 2012)
+-- 	AND playerid IN ('leylaji99', 'johnsda02')
+
+--Exploring the relationship between the managers and teams tables
+--Fun note: in the 1800's, they were called the Boston Red and Chicago White Stockings
+-- SELECT playerid, teamid, yearid, name
+-- FROM managers AS m
+-- LEFT JOIN teams AS t
+-- USING(teamid, yearid)
+-- ORDER BY playerid
+
+
+
+--Answer: Davie Johnson with the Baltimore Orioles (AL) in 1997 and Washington Nationals (NL) in 2012
 -- Jim Leyland with the Detriot Tigers (AL) in 2006 and Pittsburgh Pirates (NL) in 1990.
 ========================================================================================================================================================================================================================================================================================================================================
 10.
@@ -251,9 +396,10 @@ SELECT p.namefirst,
 		p.playerid,
 		b.yearid,
 		b.hr,
-		MAX(b.hr),
+		MAX(b.hr) AS max_hr_career,
 		b.g, 
 		b.stint,
+		MAX(b.hr) OVER(PARTITION BY b.yearid) AS hr_season,
 		(CAST(p.finalgame AS date) - CAST(p.debut AS date)) / 365 AS years_played,
 		g_all
 FROM people AS p
@@ -287,11 +433,75 @@ HAVING COUNT(b.hr) >= 1
 GROUP BY p.namelast, p.namefirst
 ORDER BY p.namelast, p.namefirst;
 
+--Alternative/Better ways to find answer
 
-SELECT *
-FROM people
+--For 2016, is there one entry per player? No - Will have two entries if switched teams mid year
+-- SELECT COUNT(playerid) - COUNT(DISTINCT playerid)
+-- FROM batting
+-- WHERE yearid = 2016;
 
-================================================================================================================
+WITH hr_sixteen AS
+(SELECT playerid, yearid, SUM(hr) as player_hr_sixteen
+FROM batting
+WHERE yearid = 2016
+GROUP by playerid, yearid
+ORDER BY player_hr_sixteen DESC),
+
+yearly_hr AS
+(SELECT playerid, yearid, SUM(hr) AS hr_yearly,
+ 	MAX(SUM(hr)) OVER(PARTITION BY playerid) AS best_year_hrs
+FROM batting
+GROUP BY playerid, yearid),
+
+yp AS
+(SELECT COUNT(DISTINCT yearid) AS years_played, playerid
+FROM batting
+GROUP BY playerid)
+
+SELECT playerid, namefirst, namelast, hr_yearly AS total_hr_2016, years_played
+FROM yearly_hr
+INNER JOIN hr_sixteen
+USING(playerid)
+INNER JOIN yp
+USING(playerid)
+INNER JOIN people
+USING(playerid)
+WHERE best_year_hrs = player_hr_sixteen
+	AND hr_yearly > 0
+	AND yearly_hr.yearid = 2016
+	AND years_played >= 10
+ORDER BY playerid
+
+--Alternate
+WITH maxhr AS (
+	SELECT playerid,
+			yearid,
+			hr,
+			MAX(hr) OVER (PARTITION BY playerid) AS maxhr,
+			CASE WHEN hr = MAX(hr) OVER (PARTITION BY playerid) THEN 'yes'
+			ELSE 'no' END AS career_high_2016
+	FROM batting
+)
+SELECT p.playerid,
+		p.namefirst,
+		p.namelast,
+		m.yearid,
+		m.hr,
+		m.maxhr
+FROM people AS p
+LEFT JOIN maxhr AS m
+ON p.playerid = m.playerid
+WHERE m.hr != 0
+AND m.yearid = 2016
+AND career_high_2016 = 'yes'
+AND m.playerid IN (SELECT playerid
+				  FROM batting
+				  GROUP BY playerid
+				  HAVING COUNT(DISTINCT yearid) >= 10)
+GROUP BY 1,2,3,4,5,6
+
+--Answer: Robinson Cano, Bartolo Colon, Rajai Davis, Edwin Encarnacion, Franciso Liriano, Mike Napoli, Angel Pagan, Justin Upton, Adam Wainwright
+=================================================================================================================================================
 11.
 
 SELECT s.yearid, SUM(s.salary), s.teamid
